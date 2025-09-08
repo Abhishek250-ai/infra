@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-
 jobs:
   terraform:
     runs-on: ubuntu-latest
