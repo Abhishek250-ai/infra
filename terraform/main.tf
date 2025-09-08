@@ -219,7 +219,7 @@ resource "aws_lb_target_group" "patient" {
 
 resource "aws_lb_target_group" "appointment" {
   name        = "${local.name_prefix}-appointment-tg"
-  port        = var.container_port
+  port        = var.appointment_container_port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
@@ -359,8 +359,8 @@ resource "aws_ecs_task_definition" "appointment" {
       essential = true
       portMappings = [
         {
-          containerPort = var.container_port
-          hostPort      = var.container_port
+          containerPort = var.appointment_container_port
+          hostPort      = var.appointment_container_port
         }
       ]
     }
@@ -413,6 +413,7 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
 
