@@ -203,7 +203,7 @@ resource "aws_lb" "alb" {
 resource "aws_lb_target_group" "patient" {
   name        = "${local.name_prefix}-patient-tg"
   port        = var.container_port
-  protocol    = ""
+  protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
@@ -220,7 +220,7 @@ resource "aws_lb_target_group" "patient" {
 resource "aws_lb_target_group" "appointment" {
   name        = "${local.name_prefix}-appointment-tg"
   port        = var.container_port
-  protocol    = ""
+  protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
@@ -413,6 +413,7 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
 
