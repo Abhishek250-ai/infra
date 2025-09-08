@@ -1,7 +1,7 @@
 name: Deploy Infra with Terraform
 
 on:
-  workflow_dispatch:   # manual trigger
+  workflow_dispatch:
   push:
     branches: [ "main" ]
 
@@ -13,9 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
-      # 👇 These env vars will map to Terraform variables
-      TF_VAR_patient_image: 548586340409.dkr.ecr.us-east-1.amazonaws.com/patient
-      TF_VAR_appointment_image: 548586340409.dkr.ecr.us-east-1.amazonaws.com/appointment
+      TF_VAR_patient_image: 548586340409.dkr.ecr.us-east-1.amazonaws.com/patient:latest
+      TF_VAR_appointment_image: 548586340409.dkr.ecr.us-east-1.amazonaws.com/appointment:latest
       TF_VAR_ecr_account_id: 548586340409
 
     steps:
@@ -44,7 +43,12 @@ jobs:
           cd terraform
           terraform plan -out=tfplan
 
-      - name: Terraform Apply
+      - name: Terraform Apply with Auto-Destroy on Failure
         run: |
           cd terraform
-          terraform apply -auto-approve tfplan
+          set -e
+          if ! terraform apply -auto-approve tfplan; then
+            echo "Terraform apply failed! Destroying resources to clean up..."
+            terraform destroy -auto-approve
+            exit 1
+          fi
