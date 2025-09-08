@@ -96,12 +96,13 @@ resource "aws_route_table_association" "public_assoc" {
 # NAT Gateway (NEW)
 ########################################
 resource "aws_eip" "nat" {
-  vpc = true
+  domain = "vpc"
 
   tags = {
     Name = "${local.name_prefix}-nat-eip"
   }
 }
+
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
@@ -411,5 +412,6 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
