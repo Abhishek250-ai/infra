@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.2"
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# Get available AZs
+data "aws_availability_zones" "available" {}
+
 locals {
   name_prefix = "clinic"
 }
@@ -13,16 +24,18 @@ resource "aws_subnet" "public" {
   for_each = toset(var.public_subnets_cidrs)
   vpc_id            = aws_vpc.main.id
   cidr_block        = each.value
+  availability_zone = data.aws_availability_zones.available.names[lookup(keys(aws_subnet.public), each.key, 0)]
   map_public_ip_on_launch = true
-  tags = { Name = "${local.name_prefix}-public-${substr(each.value, 0, 6)}" }
+  tags = { Name = "${local.name_prefix}-public-${substr(each.value,0,6)}" }
 }
 
 # Private subnets
 resource "aws_subnet" "private" {
   for_each = toset(var.private_subnets_cidrs)
-  vpc_id     = aws_vpc.main.id
-  cidr_block = each.value
-  tags = { Name = "${local.name_prefix}-private-${substr(each.value, 0, 6)}" }
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = each.value
+  availability_zone = data.aws_availability_zones.available.names[lookup(keys(aws_subnet.private), each.key, 0)]
+  tags = { Name = "${local.name_prefix}-private-${substr(each.value,0,6)}" }
 }
 
 # Internet Gateway
@@ -53,7 +66,7 @@ resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
 
   ingress {
-    description = "HTTP"
+    description = "HTTP_traffic"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -66,6 +79,7 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags = { Name = "${local.name_prefix}-alb-sg" }
 }
 
@@ -78,7 +92,7 @@ resource "aws_security_group" "ecs_sg" {
     to_port         = var.container_port
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
-    description     = "Allow ALB -> ECS"
+    description     = "Allow_ALB_to_ECS"
   }
 
   egress {
@@ -87,6 +101,7 @@ resource "aws_security_group" "ecs_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags = { Name = "${local.name_prefix}-ecs-sg" }
 }
 
@@ -102,10 +117,10 @@ resource "aws_lb" "alb" {
 
 # Target Groups
 resource "aws_lb_target_group" "patient_tg" {
-  name     = "${local.name_prefix}-patient-tg"
-  port     = var.container_port
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name        = "${local.name_prefix}-patient-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
   health_check {
     path                = "/"
@@ -118,10 +133,10 @@ resource "aws_lb_target_group" "patient_tg" {
 }
 
 resource "aws_lb_target_group" "appointment_tg" {
-  name     = "${local.name_prefix}-appointment-tg"
-  port     = var.container_port
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name        = "${local.name_prefix}-appointment-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
   health_check {
     path                = "/"
@@ -153,7 +168,7 @@ resource "aws_lb_listener_rule" "patient_rule" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 100
   action {
-    type = "forward"
+    type             = "forward"
     target_group_arn = aws_lb_target_group.patient_tg.arn
   }
   condition {
@@ -167,7 +182,7 @@ resource "aws_lb_listener_rule" "appointment_rule" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 110
   action {
-    type = "forward"
+    type             = "forward"
     target_group_arn = aws_lb_target_group.appointment_tg.arn
   }
   condition {
@@ -199,7 +214,7 @@ resource "aws_iam_role" "ecs_task_role" {
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${local.name_prefix}-ecs-exec-role"
+  name               = "${local.name_prefix}-ecs-exec-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
 }
 
@@ -208,7 +223,7 @@ resource "aws_iam_role_policy_attachment" "exec_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Task Definitions (patient)
+# Task Definitions
 resource "aws_ecs_task_definition" "patient" {
   family                   = "patient-task"
   network_mode             = "awsvpc"
@@ -230,17 +245,16 @@ resource "aws_ecs_task_definition" "patient" {
         }
       ]
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/ || exit 1"]
-        interval = 30
-        timeout = 5
-        retries = 2
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/ || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 2
         startPeriod = 10
       }
     }
   ])
 }
 
-# Task Definitions (appointment)
 resource "aws_ecs_task_definition" "appointment" {
   family                   = "appointment-task"
   network_mode             = "awsvpc"
@@ -262,10 +276,10 @@ resource "aws_ecs_task_definition" "appointment" {
         }
       ]
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/ || exit 1"]
-        interval = 30
-        timeout = 5
-        retries = 2
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/ || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 2
         startPeriod = 10
       }
     }
@@ -279,16 +293,19 @@ resource "aws_ecs_service" "patient" {
   task_definition = aws_ecs_task_definition.patient.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
+
   network_configuration {
     subnets         = values(aws_subnet.private)[*].id
     security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = false
   }
+
   load_balancer {
     target_group_arn = aws_lb_target_group.patient_tg.arn
     container_name   = "patient"
     container_port   = var.container_port
   }
+
   depends_on = [aws_lb_listener.http]
 }
 
@@ -298,15 +315,18 @@ resource "aws_ecs_service" "appointment" {
   task_definition = aws_ecs_task_definition.appointment.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
+
   network_configuration {
     subnets         = values(aws_subnet.private)[*].id
     security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = false
   }
+
   load_balancer {
     target_group_arn = aws_lb_target_group.appointment_tg.arn
     container_name   = "appointment"
     container_port   = var.container_port
   }
+
   depends_on = [aws_lb_listener.http]
 }
