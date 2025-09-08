@@ -1,10 +1,3 @@
-terraform {
-  required_version = ">= 1.2"
-}
-
-provider "aws" {
-  region = var.aws_region
-}
 
 # Get available AZs
 data "aws_availability_zones" "available" {}
@@ -330,3 +323,4 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
