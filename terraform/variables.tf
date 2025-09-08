@@ -31,7 +31,7 @@ variable "private_subnets_cidrs" {
 variable "container_port" {
   description = "Port for ECS containers"
   type        = number
-  default     = 80
+  default     = 3000
 }
 
 variable "desired_count" {
@@ -49,3 +49,4 @@ variable "appointment_image" {
   description = "ECR image URI for appointment service"
   type        = string
 }
+
