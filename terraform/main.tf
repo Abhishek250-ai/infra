@@ -203,7 +203,7 @@ resource "aws_lb" "alb" {
 resource "aws_lb_target_group" "patient" {
   name        = "${local.name_prefix}-patient-tg"
   port        = var.container_port
-  protocol    = "HTTP"
+  protocol    = ""
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
@@ -220,7 +220,7 @@ resource "aws_lb_target_group" "patient" {
 resource "aws_lb_target_group" "appointment" {
   name        = "${local.name_prefix}-appointment-tg"
   port        = var.container_port
-  protocol    = "HTTP"
+  protocol    = ""
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
@@ -238,6 +238,21 @@ resource "aws_lb_target_group" "appointment" {
 # Listeners
 ########################################
 
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
 # Path-based routing
 resource "aws_lb_listener_rule" "patient_rule" {
   listener_arn = aws_lb_listener.http.arn
@@ -398,6 +413,7 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
 
