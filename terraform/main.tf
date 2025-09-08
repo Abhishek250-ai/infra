@@ -208,7 +208,7 @@ resource "aws_lb_target_group" "patient" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -225,7 +225,7 @@ resource "aws_lb_target_group" "appointment" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -412,6 +412,7 @@ resource "aws_ecs_service" "appointment" {
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
 
