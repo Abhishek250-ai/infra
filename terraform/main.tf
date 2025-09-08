@@ -172,6 +172,16 @@ resource "aws_security_group" "ecs_sg" {
     security_groups  = [aws_security_group.alb_sg.id]
   }
 
+ ingress {
+    description      = "Allow ALB to ECS"
+    from_port        = var.appointment_container_port
+    to_port          = var.appointment_container_port
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.alb_sg.id]
+  }
+
+
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -408,11 +418,12 @@ resource "aws_ecs_service" "appointment" {
   load_balancer {
     target_group_arn = aws_lb_target_group.appointment.arn
     container_name   = "appointment"
-    container_port   = var.container_port
+    container_port   = var.appointment_container_port
   }
 
   depends_on = [aws_lb_listener.http]
 }
+
 
 
 
