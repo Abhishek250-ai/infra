@@ -34,6 +34,13 @@ variable "container_port" {
   default     = 3000
 }
 
+variable "appointment_container_port" {
+  description = "Port for appointment ECS container"
+  type        = number
+  default     = 3001
+}
+
+
 variable "desired_count" {
   description = "Number of ECS tasks to run"
   type        = number
@@ -49,4 +56,5 @@ variable "appointment_image" {
   description = "ECR image URI for appointment service"
   type        = string
 }
+
 
